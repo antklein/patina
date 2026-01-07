@@ -14,14 +14,11 @@ use r_efi::efi;
 use spin::rwlock::RwLock;
 
 /// GUID for the EFI_DEBUG_IMAGE_INFO_TABLE per section 18.4.3 of UEFI Spec 2.11
-pub const EFI_DEBUG_IMAGE_INFO_TABLE_GUID: efi::Guid =
+pub(super) const EFI_DEBUG_IMAGE_INFO_TABLE_GUID: efi::Guid =
     efi::Guid::from_fields(0x49152e77, 0x1ada, 0x4764, 0xb7, 0xa2, &[0x7a, 0xfe, 0xfe, 0xd9, 0x5e, 0x8b]);
 
-/// The global debug image info table instance.
-pub static DEBUG_IMAGE_INFO_TABLE: RwLock<DebugImageInfoData> = DebugImageInfoData::new_locked();
-
 /// The type of debug image info entry.
-pub enum ImageInfoType {
+pub(super) enum ImageInfoType {
     /// A normal debug image info entry.
     Normal,
 }
@@ -52,7 +49,7 @@ impl From<ImageInfoType> for u32 {
 /// table. This cannot be guaranteed due to the fact that the table pointer ([DebugImageInfoTableHeader]) is exposed
 /// publicly via the UEFI configuration table mechanism. It is expected that this table is read-only when accessed
 /// via this mechanism, but this cannot be enforced.
-pub struct DebugImageInfoData {
+pub(super) struct DebugImageInfoData {
     /// The header of the debug image info table, which is registered as a UEFI configuration table.
     header: DebugImageInfoTableHeader,
     /// The total number of [EfiDebugImageInfo] entries able to be added to the the table before an reallocation is
@@ -67,12 +64,12 @@ impl DebugImageInfoData {
     }
 
     /// Creates a new, empty Debug Image Info Table wrapped in a RwLock.
-    const fn new_locked() -> RwLock<Self> {
+    pub(super) const fn new_locked() -> RwLock<Self> {
         RwLock::new(Self::new())
     }
 
     /// Returns a reference to the header of the debug image info table.
-    pub fn header(&self) -> &DebugImageInfoTableHeader {
+    pub(super) fn header(&self) -> &DebugImageInfoTableHeader {
         &self.header
     }
 
@@ -128,7 +125,7 @@ impl DebugImageInfoData {
     }
 
     /// Adds a new entry to the debug image info table.
-    pub fn add_entry(
+    pub(super) fn add_entry(
         &mut self,
         image_info_type: ImageInfoType,
         protocol: NonNull<efi::protocols::loaded_image::Protocol>,
@@ -152,7 +149,7 @@ impl DebugImageInfoData {
     }
 
     /// Removes the first entry matching the specified handle.
-    pub fn remove_entry(&mut self, handle: efi::Handle) {
+    pub(super) fn remove_entry(&mut self, handle: efi::Handle) {
         self.modify(|s| {
             if let Some(index) = s.find(handle) {
                 let _ = s.swap_remove(index);
@@ -257,7 +254,7 @@ impl Drop for DebugImageInfoData {
 /// - `table` is either null or points to a valid array of `EfiDebugImageInfo` entries of length `table_size`.
 /// - `table_size` accurately reflects the number of valid entries in `table`.
 #[repr(C)]
-pub struct DebugImageInfoTableHeader {
+pub(super) struct DebugImageInfoTableHeader {
     update_status: u32,
     table_size: u32,
     table: *mut EfiDebugImageInfo,
@@ -265,10 +262,10 @@ pub struct DebugImageInfoTableHeader {
 
 impl DebugImageInfoTableHeader {
     /// Status flag indicating an update is in progress.
-    pub const EFI_DEBUG_IMAGE_INFO_UPDATE_IN_PROGRESS: u32 = 0x1;
+    const EFI_DEBUG_IMAGE_INFO_UPDATE_IN_PROGRESS: u32 = 0x1;
 
     /// Status flag indicating the table has been modified.
-    pub const EFI_DEBUG_IMAGE_INFO_TABLE_MODIFIED: u32 = 0x2;
+    const EFI_DEBUG_IMAGE_INFO_TABLE_MODIFIED: u32 = 0x2;
 
     /// Creates a new, empty Debug Image Info Table Header.
     const fn new() -> Self {
@@ -377,7 +374,7 @@ impl Drop for EfiDebugImageInfo {
 
 /// Structure for the EFI_SYSTEM_TABLE_POINTER, per section 18.4.2 of UEFI Spec 2.11.
 #[repr(C)]
-pub struct EfiSystemTablePointer {
+pub(super) struct EfiSystemTablePointer {
     /// The signature of the system table pointer structure. Must be `EFI_SYSTEM_TABLE_SIGNATURE`.
     pub signature: u64,
     /// The physical address of the EFI system table.
