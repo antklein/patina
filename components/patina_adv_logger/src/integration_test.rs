@@ -61,6 +61,12 @@ fn adv_logger_test(bs: StandardBootServices) -> patina::test::Result {
     let log_info = log.unwrap();
     let mut direct_found = false;
     let mut protocol_found = false;
+
+    // Check if direct info logs have been explicitly disabled, if so just ignore the direct message checks.
+    if log::STATIC_MAX_LEVEL < log::LevelFilter::Info {
+        direct_found = true;
+    }
+
     for entry in log_info.iter() {
         // skip any messages that aren't valid UTF-8, we only care about the messages we just logged
         let Ok(log_str) = core::str::from_utf8(entry.get_message()) else { continue };
